@@ -59,7 +59,13 @@ const NavItem: Component<NavItemProps> = ({ children, value, icon }) => {
     <button
       class="nav-item"
       data-selected={mainActiveTab() === value}
-      onclick={() => setMainActiveTab(value)}
+      onclick={(e) => {
+        mainActiveTab() === value
+          ? setMainActiveTab(null) // If the active tab is clicked again hide the sidebar
+          : setMainActiveTab(value);
+
+        e.currentTarget.blur(); // Reset the active state on the button
+      }}
     >
       <Fa class="nav-item__icon" icon={icon} />
       <span class="nav-item__text">{children}</span>
@@ -69,16 +75,19 @@ const NavItem: Component<NavItemProps> = ({ children, value, icon }) => {
 
 const TabContent: Component = () => {
   return (
-    <div class="tab-content">
-      <Switch fallback={<div>Tab not found</div>}>
-        <Match when={mainActiveTab() === TABS.SONGS.value}>
-          <SongList isAllSongs={true} />
-        </Match>
-        <Match when={mainActiveTab() === TABS.SETTINGS.value}>
-          <Settings />
-        </Match>
-      </Switch>
-    </div>
+    <Show when={mainActiveTab() !== null}>
+      <div className="tab-content">
+        {/* fallback should never kick in */}
+        <Switch fallback={<div>An error occurred</div>}>
+          <Match when={mainActiveTab() === TABS.SONGS.value}>
+            <SongList isAllSongs={true} />
+          </Match>
+          <Match when={mainActiveTab() === TABS.SETTINGS.value}>
+            <Settings />
+          </Match>
+        </Switch>
+      </div>
+    </Show>
   );
 };
 

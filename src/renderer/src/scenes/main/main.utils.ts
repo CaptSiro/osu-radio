@@ -20,5 +20,5 @@ export const TABS = {
   }
 } satisfies Record<string, Tab>;
 
-const [mainActiveTab, setMainActiveTab] = createSignal(TABS.SONGS.value);
+const [mainActiveTab, setMainActiveTab] = createSignal<string|null>(TABS.SONGS.value);
 export { mainActiveTab, setMainActiveTab };
