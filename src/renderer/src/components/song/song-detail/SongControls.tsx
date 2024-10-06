@@ -26,11 +26,14 @@ import { GLOBAL_ICON_SCALE } from "../../../App";
 import Bar from "../../bar/Bar";
 import IconButton from "@renderer/components/icon-button/IconButton";
 
-type SongControlsProps = {};
+type SongControlsProps = {
+  avgColor: string; // Accept avgColor as a prop
+};
 
-const SongControls: Component<SongControlsProps> = () => {
+const SongControls: Component<SongControlsProps> = (props) => {
   const [disable, setDisable] = createSignal(isSongUndefined(song()));
   const [playHint, setPlayHint] = createSignal("");
+  const [isVolumeBarVisible, setIsVolumeBarVisible] = createSignal(false); // Signal to track visibility
 
   createEffect(() => {
     const disabled = disable();
@@ -46,9 +49,13 @@ const SongControls: Component<SongControlsProps> = () => {
   createEffect(() => setDisable(isSongUndefined(song())));
 
   return (
-    <div class="song-controls">
+    <div class="song-controls" style={{ "--dynamic-color": props.avgColor }}>
       {/* Left part */}
-      <div class="song-controls__left-part">
+      <div
+        class="song-controls__left-part"
+        onMouseEnter={() => setIsVolumeBarVisible(true)}  // Show on hover
+        onMouseLeave={() => setIsVolumeBarVisible(false)} // Hide when not hovered
+      >
         <IconButton>
           <Switch>
             <Match when={localVolume() === 0}>
@@ -62,8 +69,13 @@ const SongControls: Component<SongControlsProps> = () => {
             </Match>
           </Switch>
         </IconButton>
-        <div class="song-controls__volume-bar">
-          <Bar fill={localVolume()} setFill={setLocalVolume} />
+        {/* Volume bar slider */}
+        <div
+          class="song-controls__volume-bar"
+          classList={{ visible: isVolumeBarVisible() }}  // Add visible class when hovered
+          style={{ "--bar-fill-color": props.avgColor }}
+        >
+          <Bar fill={localVolume()} setFill={setLocalVolume} color={props.avgColor} />
         </div>
       </div>
 
@@ -80,6 +92,7 @@ const SongControls: Component<SongControlsProps> = () => {
           <Fa icon={faBackwardStep} scale={GLOBAL_ICON_SCALE} />
         </IconButton>
 
+        {/* Play button with dynamic background color */}
         <button
           class="song-controls__toggle-play"
           onClick={() => togglePlay()}
@@ -106,6 +119,8 @@ const SongControls: Component<SongControlsProps> = () => {
           <Fa icon={faAdd} scale={GLOBAL_ICON_SCALE} />
         </IconButton>
       </div>
+
+      {/* Song play bar slider */}
     </div>
   );
 };

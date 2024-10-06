@@ -11,11 +11,13 @@ type SongImageProps = {
   src: string | undefined | Accessor<string | undefined>;
   group?: string;
   instantLoad?: boolean;
+  onImageLoad?: (imgElement: HTMLImageElement) => void; // Pass a callback when the image is loaded
 } & JSX.IntrinsicElements["div"];
 
 const SongImage: Component<SongImageProps> = (props) => {
   const [src, setSrc] = createSignal(defaultBackground);
   let image!: HTMLDivElement;
+  let hiddenImage!: HTMLImageElement; // Reference to the hidden image
 
   const setSource = (evt) => {
     setSrc(evt.detail);
@@ -26,7 +28,13 @@ const SongImage: Component<SongImageProps> = (props) => {
     const b = typeof props.src === "function" ? props.src() : props.src;
     if (props.instantLoad) {
       const resource = await getResourcePath(b);
-      setSrc(await availableResource(resource, defaultBackground));
+      const resolvedSrc = await availableResource(resource, defaultBackground);
+      setSrc(resolvedSrc);
+
+      if (hiddenImage && props.onImageLoad) {
+        hiddenImage.src = resolvedSrc;
+        props.onImageLoad(hiddenImage); // Call the callback when image is loaded
+      }
 
       return;
     }
@@ -53,11 +61,17 @@ const SongImage: Component<SongImageProps> = (props) => {
               String(entries[i].target.getAttribute("data-url"))
             );
 
+            const resolvedSrc = await availableResource(resource, defaultBackground);
             entries[i].target.dispatchEvent(
               new CustomEvent(SET_SOURCE_EVENT, {
-                detail: await availableResource(resource, defaultBackground)
+                detail: resolvedSrc
               })
             );
+
+            if (hiddenImage && props.onImageLoad) {
+              hiddenImage.src = resolvedSrc;
+              props.onImageLoad(hiddenImage); // Call the callback when image is loaded
+            }
 
             observer?.unobserve(entries[i].target);
           }
@@ -75,15 +89,24 @@ const SongImage: Component<SongImageProps> = (props) => {
   });
 
   return (
-    <div
-      {...props}
-      ref={image}
-      class="song-image"
-      style={{
-        "background-image": `url('${src().replaceAll("'", "\\'")}')`
-      }}
-      data-url={props.src ?? ""}
-    />
+    <>
+      <div
+        {...props}
+        ref={image}
+        class="song-image"
+        style={{
+          "background-image": `url('${src().replaceAll("'", "\\'")}')`
+        }}
+        data-url={props.src ?? ""}
+      />
+      {/* Hidden img element for extracting color */}
+      <img
+        ref={hiddenImage} // Reference to the hidden image
+        src={src()} // Same source as the background image
+        alt="hidden"
+        style={{ display: "none" }} // Keep it hidden
+      />
+    </>
   );
 };
 

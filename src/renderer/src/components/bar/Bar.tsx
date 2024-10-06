@@ -14,6 +14,7 @@ type BarProps = {
   fill: number;
   setFill?: (fill: number) => any;
   disabled?: boolean;
+  color?: string;
 };
 
 const Bar: Component<BarProps> = (props) => {
@@ -74,7 +75,8 @@ const Bar: Component<BarProps> = (props) => {
         editable: props.setFill !== undefined
       }}
       style={{
-        "--fill-per": clamp(0, 1, props.fill) * 100 + "%"
+        "--fill-per": clamp(0, 1, props.fill) * 100 + "%",
+        "--fill-color": props.color || "black"
       }}
       onPointerDown={calculateFill}
       data-disabled={props.disabled}
