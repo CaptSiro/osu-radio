@@ -40,16 +40,14 @@ export { duration, setDuration };
 const [timestamp, setTimestamp] = createSignal(0);
 export { timestamp, setTimestamp };
 
+const [isSeeking, setIsSeeking] = createSignal({
+  value: false,
+  pausedSeekingStart: false
+});
+export { isSeeking, setIsSeeking };
+
 const [volume, setVolume] = createSignal<ZeroToOne>(0.3);
 export { volume, setVolume };
-
-const [localVolume, _setLocalVolume] = createSignal<ZeroToOne>(0.5);
-/** Sets ans saves the local volume. */
-const setLocalVolume = (newLocalVolume: ZeroToOne) => {
-  _setLocalVolume(newLocalVolume);
-  saveLocalVoulme(newLocalVolume, song());
-};
-export { localVolume, setLocalVolume };
 // -----
 
 const player = new Audio();
@@ -62,11 +60,7 @@ window.api.request("settings::get", "volume").then((v) => {
   setVolume(v.value);
 });
 
-function calculateVolume(): number {
-  const v = volume();
-  return v + (localVolume() - 0.5) * 2 * v;
-}
-player.volume = calculateVolume();
+player.volume = volume();
 
 const [bpm, setBPM] = createSignal<Optional<number>>(none(), {
   equals: (prev, next) => {
@@ -129,8 +123,6 @@ export async function play(): Promise<void> {
   if (m !== undefined && player.src !== m.href) {
     player.src = m.href;
   }
-
-  player.volume = calculateVolume();
 
   await player.play().catch((reason) => console.error(reason));
 
@@ -204,30 +196,12 @@ export function seek(range: ZeroToOne): void {
     return;
   }
 
-  player.currentTime = range * player.duration;
-
-  setDuration(player.duration);
   setTimestamp(player.currentTime);
+  player.currentTime = range * player.duration;
 }
 
-createEffect(async () => {
-  setBPM(none());
-
-  const audio = (await window.api.request(
-    "resource::get",
-    song().audio,
-    "audio"
-  )) as Optional<AudioSource>;
-
-  if (audio.isNone) {
-    return;
-  }
-
-  setLocalVolume(audio.value.volume ?? 0.5);
-});
-
 createEffect(() => {
-  player.volume = calculateVolume();
+  player.volume = volume();
 });
 
 const [writeVolume] = delay(async (volume: number) => {
@@ -251,6 +225,10 @@ window.api.listen("queue::songChanged", async (s) => {
 });
 
 player.addEventListener("ended", async () => {
+  if (isSeeking().value) {
+    return;
+  }
+
   await next();
 });
 
@@ -303,4 +281,31 @@ export const saveLocalVoulme = async (localVolume: ZeroToOne, song: Song) => {
   }
 
   await window.api.request("save::localVolume", localVolume, song.path);
+};
+
+export const handleSeekStart = () => {
+  setIsSeeking({
+    value: true,
+    pausedSeekingStart: player.paused
+  });
+
+  player.pause();
+};
+
+export const handleSeekEnd = () => {
+  const pausedSeekingStart = isSeeking().pausedSeekingStart;
+
+  setIsSeeking({
+    value: false,
+    pausedSeekingStart: false
+  });
+
+  if (player.duration === player.currentTime) {
+    next();
+    return;
+  }
+
+  if (!pausedSeekingStart) {
+    player.play();
+  }
 };

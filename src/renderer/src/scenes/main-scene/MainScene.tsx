@@ -20,7 +20,9 @@ const MainScene: Component = () => {
       <main class="main-scene__main">
         <TabContent />
         <div class="main-scene__song-detail">
-          <SongDetail />
+          <Show when={song().audio}>
+            <SongDetail />
+          </Show>
         </div>
 
         <QueueModal />

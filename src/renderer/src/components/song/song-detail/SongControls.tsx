@@ -4,9 +4,9 @@ import {
   next,
   previous,
   togglePlay,
-  localVolume,
-  setLocalVolume,
-  song
+  song,
+  setVolume,
+  volume
 } from "../../../components/song/song.utils";
 import { isSongUndefined } from "../../../lib/song";
 import Bar from "../../bar/Bar";
@@ -37,19 +37,19 @@ const SongControls: Component<SongControlsProps> = () => {
       <div class="song-controls__left-part">
         <IconButton>
           <Switch>
-            <Match when={localVolume() === 0}>
+            <Match when={volume() === 0}>
               <i class="ri-volume-mute-fill" />
             </Match>
-            <Match when={localVolume() < 0.5}>
+            <Match when={volume() < 0.5}>
               <i class="ri-volume-down-fill" />
             </Match>
-            <Match when={localVolume() >= 0.5}>
+            <Match when={volume() >= 0.5}>
               <i class="ri-volume-up-fill" />
             </Match>
           </Switch>
         </IconButton>
         <div class="song-controls__volume-bar">
-          <Bar fill={localVolume()} setFill={setLocalVolume} />
+          <Bar fill={volume()} setFill={setVolume} />
         </div>
       </div>
 
