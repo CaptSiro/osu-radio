@@ -9,14 +9,15 @@ import {
   volume
 } from "../../../components/song/song.utils";
 import { isSongUndefined } from "../../../lib/song";
-import Bar from "../../bar/Bar";
 import IconButton from "@renderer/components/icon-button/IconButton";
+import Slider from "@renderer/components/slider/Slider";
 
 type SongControlsProps = {};
 
 const SongControls: Component<SongControlsProps> = () => {
   const [disable, setDisable] = createSignal(isSongUndefined(song()));
   const [playHint, setPlayHint] = createSignal("");
+  const [isHoveringVolume, setIsHoveringVolume] = createSignal(false);
 
   createEffect(() => {
     const disabled = disable();
@@ -35,7 +36,16 @@ const SongControls: Component<SongControlsProps> = () => {
     <div class="song-controls">
       {/* Left part */}
       <div class="song-controls__left-part">
-        <IconButton>
+        <div
+          onMouseEnter={() => setIsHoveringVolume(true)}
+          onMouseLeave={() => setIsHoveringVolume(false)}
+          // TODO - REMOVE - ONLY FOR TESTING!
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "12px"
+          }}
+        >
           <Switch>
             <Match when={volume() === 0}>
               <i class="ri-volume-mute-fill" />
@@ -47,9 +57,21 @@ const SongControls: Component<SongControlsProps> = () => {
               <i class="ri-volume-up-fill" />
             </Match>
           </Switch>
-        </IconButton>
-        <div class="song-controls__volume-bar">
-          <Bar fill={volume()} setFill={setVolume} />
+          <Show when={isHoveringVolume()}>
+            <Slider
+              class="song-controls__volume"
+              min={0}
+              max={1}
+              value={volume}
+              onValueChange={setVolume}
+              enableWheelSlide
+            >
+              <Slider.Track class="song-controls__volume-track">
+                <Slider.Range class="song-controls__volume-range" />
+              </Slider.Track>
+              <Slider.Thumb class="song-controls__volume-thumb" />
+            </Slider>
+          </Show>
         </div>
       </div>
 

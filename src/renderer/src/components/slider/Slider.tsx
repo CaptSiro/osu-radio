@@ -27,6 +27,8 @@ export type Props = {
   onValueStart?: () => void;
   min?: number;
   max?: number;
+  class?: string;
+  enableWheelSlide?: boolean;
 };
 
 type Event = PointerEvent & {
@@ -133,12 +135,15 @@ const SliderRoot: ParentComponent<Props> = (props) => {
     const stepDirection = direction === "left" ? -1 : 1;
     const step = (sliderContext.max / 100) * 5;
     const stepInDirection = step * stepDirection;
-    sliderContext.setValue((value) => value + stepInDirection);
+    const min = sliderContext.min;
+    const max = sliderContext.max;
+    sliderContext.setValue((value) => clamp(min, max, value + stepInDirection));
   };
 
   return (
     <SliderContext.Provider value={sliderContext}>
       <span
+        class={props.class}
         style={{
           position: "relative"
         }}
@@ -162,6 +167,13 @@ const SliderRoot: ParentComponent<Props> = (props) => {
             target.releasePointerCapture(event.pointerId);
             handleSlideEnd();
           }
+        }}
+        onWheel={(event) => {
+          if (!props.enableWheelSlide) {
+            return;
+          }
+
+          move(event.deltaY > 0 ? "left" : "right");
         }}
         onKeyDown={(event) => {
           switch (event.key) {

@@ -85,12 +85,36 @@
         display: flex;
         align-items: center;
         flex: 1;
+        gap: 12px;
 
-        .song-controls__volume-bar {
-          padding-left: 12px;
-          width: 100%;
-          max-width: 100px;
+        .song-controls__volume {
+          display: flex;
+          align-items: center;
+          width: 100px;
+          height: 14px;
           flex: 1;
+
+          .song-controls__volume-track {
+            height: 4px;
+            background-color: black;
+            flex: 1;
+            border-radius: 4px;
+
+            .song-controls__volume-range {
+              display: block;
+              background-color: #ff36d4;
+              border-radius: 4px;
+              height: 4px;
+            }
+          }
+
+          .song-controls__volume-thumb {
+            display: block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: white;
+          }
         }
       }
 
@@ -127,10 +151,16 @@
   display: block;
   width: 6px;
   height: 32px;
-  transition: width 0.12s ease-out, height 0.12s ease-out, background 0.12s ease-out;
+  transition:
+    width 0.12s ease-out,
+    height 0.12s ease-out,
+    background 0.12s ease-out;
   background: rgba(161, 162, 171, 0.85);
-  box-shadow: -16px 4px 6px rgba(0, 0, 0, 0.01), -9px 2px 5px rgba(0, 0, 0, 0.05),
-    -4px 1px 4px rgba(0, 0, 0, 0.09), -1px 0px 2px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    -16px 4px 6px rgba(0, 0, 0, 0.01),
+    -9px 2px 5px rgba(0, 0, 0, 0.05),
+    -4px 1px 4px rgba(0, 0, 0, 0.09),
+    -1px 0px 2px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
 
   &:focus {
