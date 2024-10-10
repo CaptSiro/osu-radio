@@ -41,7 +41,7 @@ export type RequestAPI = {
   "dir::autoGetOsuDir": () => Optional<string>;
   "dir::submit": (dir: string) => void;
 
-  "discord::play": (song: Song, duration?: number) => void;
+  "discord::play": (song: Song, duration: number, songLength: number) => void;
   "discord::pause": (song: Song) => void;
 
   "error::dismissed": () => void;

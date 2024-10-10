@@ -14,9 +14,9 @@ const defaultPresence: SetActivity = {
   buttons: [{ label: "Check out osu!radio", url: "https://github.com/Team-BTMC/osu-radio" }],
 };
 
-Router.respond("discord::play", async (_evt, song, duration) => {
+Router.respond("discord::play", async (_evt, song, duration, songLength) => {
   const startTimestamp = new Date(new Date().getTime() - (duration ? duration * 1000 : 0));
-  const endTimestamp = startTimestamp.getTime() + song.duration * 1000;
+  const endTimestamp = startTimestamp.getTime() + songLength * 1000;
 
   const response = await fetch(
     `https://assets.ppy.sh/beatmaps/${song.beatmapSetID}/covers/list@2x.jpg`,
