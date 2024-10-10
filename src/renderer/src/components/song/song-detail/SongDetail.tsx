@@ -27,12 +27,6 @@ const SongDetail: Component = () => {
         </div>
 
         <ProgressBar />
-
-        {/* <div class="song-detail__time">
-          <span>{formatTime(timestamp() * 1_000)}</span>
-          <span>{formatTime(duration() * 1_000)}</span>
-        </div> */}
-
         <SongControls />
       </div>
     </div>

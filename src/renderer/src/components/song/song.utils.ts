@@ -196,8 +196,9 @@ export function seek(range: ZeroToOne): void {
     return;
   }
 
-  setTimestamp(player.currentTime);
-  player.currentTime = range * player.duration;
+  const newTime = range * duration();
+  player.currentTime = newTime;
+  setTimestamp(newTime);
 }
 
 createEffect(() => {
@@ -235,10 +236,11 @@ player.addEventListener("ended", async () => {
 const OFFSET = 0;
 const BPM = 1;
 
+player.addEventListener("loadedmetadata", () => {
+  setDuration(player.duration);
+});
 player.addEventListener("timeupdate", () => {
   setTimestamp(player.currentTime);
-  setDuration(player.duration);
-
   if (isSongUndefined(song()) || song().bpm[0][OFFSET] / 1000 > player.currentTime) {
     return;
   }

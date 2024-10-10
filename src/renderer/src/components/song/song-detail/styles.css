@@ -81,17 +81,24 @@
         }
       }
 
-      .song-controls__left-part {
+      .song-controls__left-part-wrapper {
         display: flex;
         align-items: center;
         flex: 1;
         gap: 12px;
 
+        .song-controls__left-part {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          height: 32px;
+        }
+
         .song-controls__volume {
           display: flex;
           align-items: center;
           width: 100px;
-          height: 14px;
+          height: 32px;
           flex: 1;
 
           .song-controls__volume-track {
@@ -113,7 +120,8 @@
             width: 14px;
             height: 14px;
             border-radius: 50%;
-            background-color: white;
+            background: white;
+            margin-top: 9px;
           }
         }
       }

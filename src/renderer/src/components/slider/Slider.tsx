@@ -7,6 +7,7 @@ import {
   createMemo,
   createSignal,
   ParentComponent,
+  Setter,
   useContext
 } from "solid-js";
 import { DOMElement } from "solid-js/jsx-runtime";
@@ -103,7 +104,7 @@ const SliderRoot: ParentComponent<Props> = (props) => {
 
   const handleSlideStart = (event: Event) => {
     const value = getValueFromPointer(event.clientX);
-    if (!value) {
+    if (typeof value === "undefined") {
       return;
     }
 
@@ -113,7 +114,7 @@ const SliderRoot: ParentComponent<Props> = (props) => {
   };
   const handleSlideMove = (event: Event) => {
     const value = getValueFromPointer(event.clientX);
-    if (!value) {
+    if (typeof value === "undefined") {
       return;
     }
 
@@ -131,73 +132,103 @@ const SliderRoot: ParentComponent<Props> = (props) => {
     sliderContext.setValue(sliderContext.max);
   };
 
-  const move = (direction: "left" | "right") => {
+  const handleStep = (direction: "left" | "right") => {
     const stepDirection = direction === "left" ? -1 : 1;
     const step = (sliderContext.max / 100) * 5;
     const stepInDirection = step * stepDirection;
     const min = sliderContext.min;
     const max = sliderContext.max;
     sliderContext.setValue((value) => clamp(min, max, value + stepInDirection));
+    sliderContext.thumb()?.focus();
   };
 
   return (
     <SliderContext.Provider value={sliderContext}>
-      <span
-        class={props.class}
-        style={{
-          position: "relative"
-        }}
+      <SlideImplementation
         ref={setSlider}
-        onPointerDown={(event) => {
-          const target = event.target as HTMLElement;
-          target.setPointerCapture(event.pointerId);
-          event.preventDefault();
-
-          handleSlideStart(event);
-        }}
-        onPointerMove={(event) => {
-          const target = event.target as HTMLElement;
-          if (target.hasPointerCapture(event.pointerId)) {
-            handleSlideMove(event);
-          }
-        }}
-        onPointerUp={(event) => {
-          const target = event.target as HTMLElement;
-          if (target.hasPointerCapture(event.pointerId)) {
-            target.releasePointerCapture(event.pointerId);
-            handleSlideEnd();
-          }
-        }}
-        onWheel={(event) => {
-          if (!props.enableWheelSlide) {
-            return;
-          }
-
-          move(event.deltaY > 0 ? "left" : "right");
-        }}
-        onKeyDown={(event) => {
-          switch (event.key) {
-            case "ArrowLeft":
-              move("left");
-              break;
-            case "ArrowRight":
-              move("right");
-              break;
-            case "Home":
-              handleHomePress();
-              break;
-            case "End":
-              handleEndPress();
-              break;
-
-            default:
-              break;
-          }
-        }}
+        onEndKeyDown={handleEndPress}
+        onHomeKeyDown={handleHomePress}
+        onSlideStart={handleSlideStart}
+        onSlideEnd={handleSlideEnd}
+        onSlideMove={handleSlideMove}
+        onStep={handleStep}
+        class={props.class}
+        enableWheelSlide={props.enableWheelSlide}
       >
         {props.children}
-      </span>
+      </SlideImplementation>
     </SliderContext.Provider>
+  );
+};
+
+type SlideImplementationProps = {
+  onSlideStart(event: Event): void;
+  onSlideMove(event: Event): void;
+  onSlideEnd(event: Event): void;
+  onHomeKeyDown(): void;
+  onEndKeyDown(): void;
+  onStep(direction: "left" | "right"): void;
+  ref: Setter<HTMLElement | undefined>;
+} & Pick<Props, "class" | "enableWheelSlide">;
+const SlideImplementation: ParentComponent<SlideImplementationProps> = (props) => {
+  return (
+    <span
+      class={props.class}
+      style={{
+        position: "relative"
+      }}
+      ref={props.ref}
+      onPointerDown={(event) => {
+        const target = event.target as HTMLElement;
+        target.setPointerCapture(event.pointerId);
+        event.preventDefault();
+
+        props.onSlideStart(event);
+      }}
+      onPointerMove={(event) => {
+        const target = event.target as HTMLElement;
+        if (!target.hasPointerCapture(event.pointerId)) {
+          return;
+        }
+
+        props.onSlideMove(event);
+      }}
+      onPointerUp={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.hasPointerCapture(event.pointerId)) {
+          target.releasePointerCapture(event.pointerId);
+          props.onSlideEnd(event);
+        }
+      }}
+      onWheel={(event) => {
+        if (!props.enableWheelSlide) {
+          return;
+        }
+
+        props.onStep(event.deltaY > 0 ? "left" : "right");
+      }}
+      onKeyDown={(event) => {
+        switch (event.key) {
+          case "ArrowLeft":
+            props.onStep("left");
+            break;
+          case "ArrowRight":
+            props.onStep("right");
+            break;
+          case "Home":
+            props.onHomeKeyDown();
+            break;
+          case "End":
+            props.onEndKeyDown();
+            break;
+
+          default:
+            break;
+        }
+      }}
+    >
+      {props.children}
+    </span>
   );
 };
 

@@ -17,7 +17,6 @@ type SongControlsProps = {};
 const SongControls: Component<SongControlsProps> = () => {
   const [disable, setDisable] = createSignal(isSongUndefined(song()));
   const [playHint, setPlayHint] = createSignal("");
-  const [isHoveringVolume, setIsHoveringVolume] = createSignal(false);
 
   createEffect(() => {
     const disabled = disable();
@@ -34,48 +33,7 @@ const SongControls: Component<SongControlsProps> = () => {
 
   return (
     <div class="song-controls">
-      {/* Left part */}
-      <div class="song-controls__left-part">
-        <div
-          onMouseEnter={() => setIsHoveringVolume(true)}
-          onMouseLeave={() => setIsHoveringVolume(false)}
-          // TODO - REMOVE - ONLY FOR TESTING!
-          style={{
-            display: "flex",
-            "align-items": "center",
-            gap: "12px"
-          }}
-        >
-          <Switch>
-            <Match when={volume() === 0}>
-              <i class="ri-volume-mute-fill" />
-            </Match>
-            <Match when={volume() < 0.5}>
-              <i class="ri-volume-down-fill" />
-            </Match>
-            <Match when={volume() >= 0.5}>
-              <i class="ri-volume-up-fill" />
-            </Match>
-          </Switch>
-          <Show when={isHoveringVolume()}>
-            <Slider
-              class="song-controls__volume"
-              min={0}
-              max={1}
-              value={volume}
-              onValueChange={setVolume}
-              enableWheelSlide
-            >
-              <Slider.Track class="song-controls__volume-track">
-                <Slider.Range class="song-controls__volume-range" />
-              </Slider.Track>
-              <Slider.Thumb class="song-controls__volume-thumb" />
-            </Slider>
-          </Show>
-        </div>
-      </div>
-
-      {/* Middle */}
+      <LeftPart />
       <div class="song-controls__middle">
         <IconButton
           onClick={() => window.api.request("queue::shuffle")}
@@ -113,13 +71,64 @@ const SongControls: Component<SongControlsProps> = () => {
           <i class="ri-repeat-2-fill" />
         </IconButton>
       </div>
+      <RightPart />
+    </div>
+  );
+};
 
-      {/* Right part */}
-      <div class="song-controls__right-part">
+const LeftPart = () => {
+  const [isHoveringVolume, setIsHoveringVolume] = createSignal(false);
+
+  return (
+    <div class="song-controls__left-part-wrapper">
+      <div
+        class="song-controls__left-part"
+        onMouseEnter={() => setIsHoveringVolume(true)}
+        onMouseLeave={() => setIsHoveringVolume(false)}
+      >
         <IconButton>
-          <i class="ri-add-fill" />
+          <Switch>
+            <Match when={volume() === 0}>
+              <i class="ri-volume-mute-fill" />
+            </Match>
+            <Match when={volume() < 0.5}>
+              <i class="ri-volume-down-fill" />
+            </Match>
+            <Match when={volume() >= 0.5}>
+              <i class="ri-volume-up-fill" />
+            </Match>
+          </Switch>
         </IconButton>
+
+        <Show when={isHoveringVolume()}>
+          <Slider
+            class="song-controls__volume"
+            min={0}
+            max={1}
+            value={volume}
+            onValueChange={(v) => {
+              console.log("setVolume", v);
+              setVolume(v);
+            }}
+            enableWheelSlide
+          >
+            <Slider.Track class="song-controls__volume-track">
+              <Slider.Range class="song-controls__volume-range" />
+            </Slider.Track>
+            <Slider.Thumb class="song-controls__volume-thumb" />
+          </Slider>
+        </Show>
       </div>
+    </div>
+  );
+};
+
+const RightPart = () => {
+  return (
+    <div class="song-controls__right-part">
+      <IconButton>
+        <i class="ri-add-fill" />
+      </IconButton>
     </div>
   );
 };
