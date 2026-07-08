@@ -8,7 +8,7 @@ Development status: Pre-Alpha ⚠️
 </p>
 
 <div align="center">
-  <a href="https://discord.gg/VvMzQ3AxFT" target="_blank">
+  <a href="https://discord.gg/xskgMKUHjV" target="_blank">
     <img src="https://img.shields.io/discord/1284644086820896879?color=7289da&label=BTMC Talent Server&logo=discord&logoColor=white" alt="Discord"/>
   </a>
   <br />
@@ -88,7 +88,7 @@ Technologies:
 - SolidJS
 - TypeScript
 
-Discussion mainly happens in the [BTMC TALENT SERVER](https://discord.gg/VvMzQ3AxFT), in the `#prj-osu-radio` channel.
+Discussion mainly happens in the [BTMC TALENT SERVER](https://discord.gg/xskgMKUHjV), in the `#prj-osu-radio` channel.
 <br />
 We're not interested in changing tech stacks for this project for the time being. We're sticking with Electron and web tech for now.
 <br />
