@@ -80,6 +80,10 @@ If you're interested in contributing as a designer, check out the [Figma](https:
 
 Remember! Contributions come in all shapes and sizes.
 
+### Disclaimer ❗
+
+osu!radio reads directly from your osu! database. It opens it completely read-only so it should not break anything, but there is still a non-zero chance that it does. We recommend always having a back-up of your database (that is the osu!.db file for stable and the client.realm file for lazer). Do let us know if something does go wrong so we can try to prevent it from happening again in the future.
+
 ## The Vision
 
 Technologies:
