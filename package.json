@@ -76,5 +76,15 @@
     "vite-plugin-lucide-preprocess": "^1.2.4",
     "vite-plugin-solid": "^2.7.0"
   },
-  "packageManager": "^bun@1.1.33"
+  "build": {
+    "appId": "btmc.osu-radio",
+    "mac": {
+      "category": "public.app-category.music"
+    },
+    "snap": {
+      "publish": [
+        "github"
+      ]
+    }
+  }
 }
