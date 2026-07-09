@@ -48,7 +48,7 @@ const SongQueue: Component = () => {
       selected.classList.remove("selected");
     }
 
-    const path = song.path.replaceAll('"', '\\"').replaceAll("\\", "\\\\");
+    const path = song.path.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
     const element = view.querySelector<HTMLElement>(`.song-item[data-path="${path}"]`);
     element?.classList.add("selected");
 
