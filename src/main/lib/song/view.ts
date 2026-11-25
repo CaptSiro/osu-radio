@@ -1,9 +1,9 @@
+import { getSongIndexes } from "@main/lib/song";
 import { Storage } from "@main/lib/storage/Storage";
 import { QueueView, ResourceID, SongIndex } from "@shared/types/common.types";
 
 function allIndexes(): SongIndex[] {
-  const indexes = Storage.getTable("system").get("indexes");
-  return indexes.isNone ? [] : indexes.value;
+  return getSongIndexes();
 }
 
 /**

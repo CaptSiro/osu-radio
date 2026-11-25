@@ -34,6 +34,6 @@ Router.respond("resource::getResizedBg", async (_evt, bgPath) => {
   return some(`data:${mimeType};base64,${buffer.toString("base64")}`);
 });
 
-Router.respond("resource::get", (_evt, id, table) => {
-  return Storage.getTable(table).get(id);
+Router.respond("resource::get", (_evt, id) => {
+  return Storage.getTable("songs").get(id);
 });

@@ -1,4 +1,5 @@
 import { averageBPM, msToBPM } from "./average-bpm";
+import { Storage } from "@main/lib/storage/Storage";
 import { Song, SongIndex } from "@shared/types/common.types";
 
 function createSongIndex(id: string, song: Song): SongIndex {
@@ -18,18 +19,11 @@ function createSongIndex(id: string, song: Song): SongIndex {
 export type IndexCallback = (i: number, song: string) => void;
 
 /**
- * For each song create song search index and creates relation between tag and song IDs. Returns array of song search
- * indexes and map where key is tag and value is array of song IDs
- * @param songs
- * @param fn
+ * Create search index for each song
  * @see {SongIndex}
  */
-export function collectTagsAndIndexSongs(
-  songs: { [id: string]: Song },
-  fn?: IndexCallback,
-): [SongIndex[], Map<string, string[]>] {
+export function indexSongs(songs: { [id: string]: Song }, fn?: IndexCallback): SongIndex[] {
   const indexes: SongIndex[] = [];
-  const tags = new Map<string, string[]>();
   let i = 0;
 
   for (const id in songs) {
@@ -42,24 +36,29 @@ export function collectTagsAndIndexSongs(
     }
 
     indexes.push(createSongIndex(id, song));
-
-    if (song.tags === undefined) {
-      continue;
-    }
-
-    // Assign to each tag current song ID
-    for (let i = 0; i < song.tags.length; i++) {
-      const key = song.tags[i].toLowerCase();
-      const entry = tags.get(key);
-
-      if (entry === undefined) {
-        tags.set(key, [id]);
-        continue;
-      }
-
-      entry.push(id);
-    }
   }
 
-  return [indexes, tags];
+  return indexes;
+}
+
+// Indexes are derived from the songs table, so they are kept only in memory instead of duplicating song data on disk
+let cachedIndexes: SongIndex[] | undefined = undefined;
+
+/**
+ * Search indexes of all songs. Built lazily from songs table on first use
+ */
+export function getSongIndexes(): SongIndex[] {
+  if (cachedIndexes === undefined) {
+    cachedIndexes = indexSongs(Storage.getTable("songs").getStruct());
+  }
+
+  return cachedIndexes;
+}
+
+/**
+ * Replace cached indexes, or drop them (`undefined`) so they are rebuilt on next use. Must be called whenever songs
+ * table is replaced or removed
+ */
+export function setSongIndexes(indexes: SongIndex[] | undefined): void {
+  cachedIndexes = indexes;
 }

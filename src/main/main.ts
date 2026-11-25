@@ -1,6 +1,6 @@
 import { DirParseResult, OsuParser } from "@main/lib/osu-file-parser/OsuParser";
 import { Router } from "@main/lib/route-pass/Router";
-import { collectTagsAndIndexSongs } from "@main/lib/song";
+import { indexSongs, setSongIndexes } from "@main/lib/song";
 import { Storage } from "@main/lib/storage/Storage";
 import { throttle } from "@main/lib/throttle";
 import { dirSubmit } from "@main/router/dir-router";
@@ -26,8 +26,7 @@ export async function main(window: BrowserWindow) {
     //TODO: check for updates in song files
   }
 
-  const songsArray = Object.values(Storage.getTable("songs").getStruct());
-  if (songsArray.length === 0) {
+  if (isEmpty(Storage.getTable("songs").getStruct())) {
     await showError(
       window,
       `No songs found in folder: ${orDefault(
@@ -41,15 +40,19 @@ export async function main(window: BrowserWindow) {
   await Router.dispatch(window, "changeScene", "main");
 }
 
-const SONGS = 0;
-const AUDIO = 1;
-const IMAGES = 2;
+function isEmpty(obj: object): boolean {
+  for (const _ in obj) {
+    return false;
+  }
+
+  return true;
+}
 
 // Update client progress bar 50 times a second
 const UPDATE_DELAY_MS = 1_000 / 50;
 
 async function configureOsuDir(mainWindow: BrowserWindow) {
-  let tables: Awaited<DirParseResult>;
+  let parsed: Awaited<DirParseResult>;
   const settings = Storage.getTable("settings");
 
   while (true) {
@@ -69,21 +72,21 @@ async function configureOsuDir(mainWindow: BrowserWindow) {
     }, UPDATE_DELAY_MS);
 
     if (dirData.version == "stable") {
-      tables = await OsuParser.parseStableDatabase(dirData.path, update);
+      parsed = await OsuParser.parseStableDatabase(dirData.path, update);
     } else {
-      tables = await OsuParser.parseLazerDatabase(dirData.path, update);
+      parsed = await OsuParser.parseLazerDatabase(dirData.path, update);
     }
     // Cancel ongoing throttled update, so it does not look bad when it finishes and afterward the update overwrites
     // finished state
     cancelUpdate();
 
-    if (tables.isError) {
-      await showError(mainWindow, tables.error);
+    if (parsed.isError) {
+      await showError(mainWindow, parsed.error);
       // Try again
       continue;
     }
 
-    if (tables.value[SONGS].size === 0) {
+    if (parsed.value.size === 0) {
       await showError(
         mainWindow,
         `No songs found in folder: ${dirData.path}. Please make sure this is the directory where you have all your songs saved.`,
@@ -97,21 +100,20 @@ async function configureOsuDir(mainWindow: BrowserWindow) {
     break;
   }
 
+  const total = parsed.value.size;
+
   // Show finished state
   await Router.dispatch(mainWindow, "loadingScene::update", {
-    max: tables.value[SONGS].size,
-    current: tables.value[SONGS].size,
-    hint: `Imported total of ${tables.value[SONGS].size} songs`,
+    max: total,
+    current: total,
+    hint: `Imported total of ${total} songs`,
   });
 
-  // Save created tables
-  const songs = Object.fromEntries(tables.value[SONGS]);
+  // Save songs (written to disk asynchronously)
+  const songs = Object.fromEntries(parsed.value);
   Storage.setTable("songs", songs);
-  Storage.setTable("audio", Object.fromEntries(tables.value[AUDIO]));
-  Storage.setTable("images", Object.fromEntries(tables.value[IMAGES]));
 
   // Start indexing songs
-  const total = Object.values(songs).length;
   await Router.dispatch(mainWindow, "loadingScene::setTitle", "Indexing songs");
 
   // Wrap client update function to update only every UPDATE_DELAY_MS
@@ -123,18 +125,13 @@ async function configureOsuDir(mainWindow: BrowserWindow) {
     });
   }, UPDATE_DELAY_MS);
 
-  const [indexes, tags] = collectTagsAndIndexSongs(songs, update);
+  setSongIndexes(indexSongs(songs, update));
   // Cancel ongoing throttled update, so it does not look bad when it finishes and afterward the update overwrites
   // finished state
   cancelUpdate();
 
-  const system = Storage.getTable("system");
-
-  // Write batch of updates to system table
-  system.hold();
-  system.write("indexes", indexes);
-  system.write("allTags", Object.fromEntries(tags));
-  system.writeBack();
+  // Persist the import right away. It is expensive to redo if the app gets killed
+  await Storage.flushAll();
 
   // Display finished state
   await Router.dispatch(mainWindow, "loadingScene::update", {

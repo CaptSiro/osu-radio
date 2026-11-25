@@ -1,6 +1,4 @@
 import type {
-  AudioSource,
-  ImageSource,
   InfiniteScrollerInitResponse,
   InfiniteScrollerRequest,
   InfiniteScrollerResponse,
@@ -9,7 +7,6 @@ import type {
   PlaylistInfo,
   QueueCreatePayload,
   ResourceID,
-  ResourceTables,
   Result,
   Settings,
   Song,
@@ -27,10 +24,7 @@ export type OsuDirectory = {
 };
 
 export type RequestAPI = {
-  "resource::get": (
-    id: ResourceID,
-    table: ResourceTables,
-  ) => Optional<Song | AudioSource | ImageSource>;
+  "resource::get": (id: ResourceID) => Optional<Song>;
   "resource::getPath": (id: any) => Result<string, string>;
   "resource::getResizedBg": (bgPath: string) => Optional<string>;
 

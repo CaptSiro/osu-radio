@@ -3,7 +3,7 @@ import { BeatmapSet } from "./lazer.types";
 import { access } from "@main/lib/fs-promises";
 import { fail, ok } from "@shared/lib/rust-types/Result";
 import { assertNever } from "@shared/lib/tungsten/assertNever";
-import { AudioSource, ImageSource, ResourceID, Result, Song } from "@shared/types/common.types";
+import { ResourceID, Result, Song } from "@shared/types/common.types";
 import fs from "graceful-fs";
 import os from "os";
 import path from "path/posix";
@@ -28,11 +28,8 @@ type FileState =
 const OFFSET = 0;
 const BPM = 1;
 
-type Table<T> = Map<ResourceID, T>;
-
-export type DirParseResult = Promise<
-  Result<[Table<Song>, Table<AudioSource>, Table<ImageSource>], string>
->;
+/** Songs keyed by Song.audio */
+export type DirParseResult = Promise<Result<Map<ResourceID, Song>, string>>;
 
 class BufferReader {
   buffer: Buffer;
@@ -131,8 +128,6 @@ export class OsuParser {
     const beatmapSets = realm.objects<BeatmapSet>("BeatmapSet");
 
     const songTable = new Map<ResourceID, Song>();
-    const audioTable = new Map<ResourceID, AudioSource>();
-    const imageTable = new Map<ResourceID, ImageSource>();
 
     let i = 0;
     for (const beatmapSet of beatmapSets) {
@@ -200,12 +195,8 @@ export class OsuParser {
 
             song.beatmapSetID = beatmapSet.OnlineID;
 
+            song.ctime = String(beatmapSet.DateAdded);
             songTable.set(song.audio, song);
-            audioTable.set(song.audio, {
-              songID: song.audio,
-              path: song.audio,
-              ctime: String(beatmapSet.DateAdded),
-            });
 
             if (update) {
               update(i + 1, beatmapSets.length, song.title);
@@ -231,7 +222,7 @@ export class OsuParser {
       force: true,
     });
 
-    return ok([songTable, audioTable, imageTable]);
+    return ok(songTable);
   }
 
   static async parseStableDatabase(
@@ -289,11 +280,6 @@ export class OsuParser {
     }
 
     const songTable = new Map<ResourceID, Song>();
-    const audioTable = new Map<ResourceID, AudioSource>();
-
-    // NOTE: Images can only be fetched from the .osu file AFAIK.
-    //       You should parse those dynamically when needed.
-    const imageTable = new Map<ResourceID, ImageSource>();
 
     const db_version = db.readInt();
     if (db_version < 20170222) {
@@ -450,12 +436,8 @@ export class OsuParser {
         }
 
         if (song.audio != last_audio_filepath) {
+          song.ctime = String(last_modification_time);
           songTable.set(song.audio, song);
-          audioTable.set(song.audio, {
-            songID: song.audio,
-            path: song.audio,
-            ctime: String(last_modification_time),
-          });
         }
 
         last_audio_filepath = audioFilePath;
@@ -468,7 +450,7 @@ export class OsuParser {
       }
     }
 
-    return ok([songTable, audioTable, imageTable]);
+    return ok(songTable);
   }
 
   static async parseFile(file: string): Promise<Result<OsuFile, string>> {
