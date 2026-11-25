@@ -53,6 +53,9 @@ export type RequestAPI = {
   "dir::select": () => Optional<OsuDirectory>;
   "dir::autoGetOsuDirs": () => Optional<OsuDirectory[]>;
   "dir::submit": (dir: OsuDirectory) => void;
+  "dir::cancel": () => void;
+  "dir::isCancelable": () => boolean;
+  "dir::current": () => Optional<OsuDirectory>;
 
   "discord::play": (song: Song, length: number, duration: number) => void;
   "discord::pause": (song: Song) => void;
@@ -65,6 +68,8 @@ export type RequestAPI = {
   "settings::write": <K extends keyof Settings>(key: K, value: any) => void;
   "settings::get": <K extends keyof Settings>(key: K) => Optional<any>;
   "settings::DeleteSongData": () => void;
+  "settings::reimportSongs": () => void;
+  "settings::changeOsuDir": () => void;
 
   "app::restart": () => void;
 

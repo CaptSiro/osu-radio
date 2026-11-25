@@ -20,6 +20,7 @@ export class Table<S extends object> {
   private readonly path: string;
   private struct: S;
 
+  private rev = 0;
   private dirty = false;
   private writing: Promise<void> | undefined = undefined;
   private debounceTimer: NodeJS.Timeout | undefined = undefined;
@@ -78,9 +79,17 @@ export class Table<S extends object> {
   }
 
   /**
+   * Number that changes whenever the table content changes. Useful for invalidating caches derived from the table
+   */
+  revision(): number {
+    return this.rev;
+  }
+
+  /**
    * Schedule the table to be written to disk
    */
   markDirty(): void {
+    this.rev++;
     const now = Date.now();
     if (!this.dirty) {
       this.dirty = true;

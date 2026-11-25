@@ -1,9 +1,26 @@
 import { Router } from "@main/lib/route-pass/Router";
+import { Storage } from "@main/lib/storage/Storage";
 import { none, some } from "@shared/lib/rust-types/Optional";
 import { OsuDirectory } from "@shared/types/router.types";
 import { dialog } from "electron";
 import fs from "fs";
 import path from "path";
+
+/**
+ * Detect which osu! version is installed in given folder
+ * @returns undefined if the folder is not an osu! installation
+ */
+export function detectOsuDir(p: string): OsuDirectory | undefined {
+  if (fs.existsSync(path.join(p, "osu!.db"))) {
+    return { version: "stable", path: p };
+  }
+
+  if (fs.existsSync(path.join(p, "client.realm"))) {
+    return { version: "lazer", path: p };
+  }
+
+  return undefined;
+}
 
 Router.respond("dir::select", () => {
   const result = dialog.showOpenDialogSync({
@@ -14,15 +31,9 @@ Router.respond("dir::select", () => {
   if (result === undefined) {
     return none();
   }
-  const p = result[0];
 
-  if (fs.existsSync(path.join(p, "osu!.db"))) {
-    return some({ version: "stable", path: p });
-  } else if (fs.existsSync(path.join(p, "client.realm"))) {
-    return some({ version: "lazer", path: p });
-  } else {
-    return none();
-  }
+  const dir = detectOsuDir(result[0]);
+  return dir === undefined ? none() : some(dir);
 });
 
 function getStoragePath(iniPath: string) {
@@ -93,20 +104,50 @@ Router.respond("dir::autoGetOsuDirs", () => {
   }
 });
 
-type DirSubmitResolve = (value: OsuDirectory) => void;
+type DirSubmitResolve = (value: OsuDirectory | undefined) => void;
 
 let pendingDirRequest: DirSubmitResolve | undefined = undefined;
+let isPendingCancelable = false;
+
+function resolvePending(dir: OsuDirectory | undefined): void {
+  const resolve = pendingDirRequest;
+  pendingDirRequest = undefined;
+  isPendingCancelable = false;
+  resolve?.(dir);
+}
 
 Router.respond("dir::submit", (_evt, dir: OsuDirectory) => {
-  if (pendingDirRequest) {
-    pendingDirRequest(dir);
+  resolvePending(dir);
+});
 
-    pendingDirRequest = undefined;
+Router.respond("dir::cancel", () => {
+  if (isPendingCancelable) {
+    resolvePending(undefined);
   }
 });
 
-export function dirSubmit(): Promise<OsuDirectory> {
+Router.respond("dir::isCancelable", () => {
+  return isPendingCancelable;
+});
+
+Router.respond("dir::current", () => {
+  const current = Storage.getTable("settings").get("osuSongsDir");
+  if (current.isNone) {
+    return none();
+  }
+
+  const dir = detectOsuDir(current.value);
+  return dir === undefined ? none() : some(dir);
+});
+
+/**
+ * Wait for the user to pick osu! installation in dir-select scene
+ * @param cancelable whether the user may cancel the selection
+ * @returns selected installation or undefined when canceled
+ */
+export function dirSubmit(cancelable = false): Promise<OsuDirectory | undefined> {
   return new Promise((resolve) => {
     pendingDirRequest = resolve;
+    isPendingCancelable = cancelable;
   });
 }

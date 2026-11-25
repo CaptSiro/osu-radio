@@ -1,62 +1,67 @@
 import { averageBPM, msToBPM } from "./average-bpm";
-import { ok } from "@shared/lib/rust-types/Result";
-import { Order, Result, Song } from "@shared/types/common.types";
+import { assertNever } from "@shared/lib/tungsten/assertNever";
+import { Order, OrderOptions, Song } from "@shared/types/common.types";
 
-export default function order(ordering: Order): Result<(a: Song, b: Song) => number, string> {
-  const { option, direction } = ordering;
-  const sortDirection = direction === "asc" ? 1 : -1;
+const collator = new Intl.Collator();
 
+type Keyed = { song: Song; key: string | number };
+
+/**
+ * Sort key of a song. Computed once per song instead of once per comparison (date parsing and BPM averaging are
+ * expensive and sort does O(n log n) comparisons)
+ */
+function sortKey(option: OrderOptions, song: Song): string | number {
   switch (option) {
     case "dateAdded":
-      return ok((a: Song, b: Song) => {
-        return (new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()) * sortDirection;
-      });
-
+      return new Date(song.dateAdded).getTime();
     case "title":
     case "artist":
     case "creator":
-      return ok((a: Song, b: Song) => {
-        if (a[option] === "") {
-          return 1;
-        }
-
-        if (b[option] === "") {
-          return -1;
-        }
-
-        return a[option].localeCompare(b[option]) * sortDirection;
-      });
-
+      return song[option];
     case "bpm":
-      return ok((a: Song, b: Song) => {
-        const bpmA = msToBPM(averageBPM(a.bpm, a.duration * 1_000));
-        const bpmB = msToBPM(averageBPM(b.bpm, b.duration * 1_000));
-
-        if (!Number.isFinite(bpmA)) {
-          return 1;
-        }
-
-        if (!Number.isFinite(bpmB)) {
-          return -1;
-        }
-
-        return (bpmA - bpmB) * sortDirection;
-      });
-
+      return msToBPM(averageBPM(song.bpm, song.duration * 1_000));
     case "duration":
-      return ok((a: Song, b: Song) => (a.duration - b.duration) * sortDirection);
-
+      return song.duration;
     default:
-      return ok((a: Song, b: Song) => {
-        if (a[option] === "") {
-          return 1;
-        }
+      assertNever(option);
+  }
 
-        if (b[option] === "") {
-          return -1;
-        }
+  return 0;
+}
 
-        return a.title.localeCompare(b.title) * sortDirection;
-      });
+/**
+ * Missing values (empty string, NaN, Infinity) are always placed at the end regardless of direction
+ */
+function compareKeys(a: string | number, b: string | number, direction: number): number {
+  if (typeof a === "string" && typeof b === "string") {
+    if (a === "") return b === "" ? 0 : 1;
+    if (b === "") return -1;
+    return collator.compare(a, b) * direction;
+  }
+
+  const aOk = Number.isFinite(a);
+  const bOk = Number.isFinite(b);
+  if (!aOk) return bOk ? 1 : 0;
+  if (!bOk) return -1;
+  return ((a as number) - (b as number)) * direction;
+}
+
+/**
+ * Sort songs in place by given ordering
+ */
+export function sortSongs(songs: Song[], ordering: Order): void {
+  const { option } = ordering;
+  let direction = ordering.direction === "asc" ? 1 : -1;
+
+  // Kept from previous behaviour: "asc" on date added means newest first
+  if (option === "dateAdded") {
+    direction = -direction;
+  }
+
+  const keyed: Keyed[] = songs.map((song) => ({ song, key: sortKey(option, song) }));
+  keyed.sort((a, b) => compareKeys(a.key, b.key, direction));
+
+  for (let i = 0; i < keyed.length; i++) {
+    songs[i] = keyed[i].song;
   }
 }
