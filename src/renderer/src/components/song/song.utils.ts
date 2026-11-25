@@ -2,7 +2,7 @@ import DEFAULT_SONG_BG_SMALL from "@renderer/assets/osu-default-background-small
 import { delay } from "@renderer/lib/delay";
 import { createDefaultSong, isSongUndefined, msToBPM } from "@renderer/lib/song";
 import { none, some } from "@shared/lib/rust-types/Optional";
-import { AudioSource, Optional, Song } from "@shared/types/common.types";
+import { Optional, Song } from "@shared/types/common.types";
 import { createSignal } from "solid-js";
 
 /** Range from 0 to 1. */
@@ -280,15 +280,10 @@ function setMediaSessionPosition() {
 export const saveLocalVolume = async (localVolume: ZeroToOne, song: Song) => {
   if (isSongUndefined(song) || localVolume === 0.5) return;
 
-  const audio = (await window.api.request(
-    "resource::get",
-    song.audio,
-    "audio",
-  )) as Optional<AudioSource>;
+  const stored = await window.api.request("resource::get", song.audio);
+  if (!stored.isNone && stored.value.volume === localVolume) return;
 
-  if (!audio.isNone && audio.value.volume === localVolume) return;
-
-  await window.api.request("save::localVolume", localVolume, song.path);
+  await window.api.request("save::localVolume", localVolume, song.audio);
 };
 
 // Event Listeners

@@ -1,4 +1,5 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
+import { Storage } from "@main/lib/storage/Storage";
 import createMenu from "@main/lib/window/menu";
 import trackBounds, { getBounds, wasMaximized } from "@main/lib/window/resizer";
 import { main } from "@main/main";
@@ -114,6 +115,11 @@ app.whenReady().then(async () => {
       await createWindow();
     }
   });
+});
+
+// Table writes are debounced. Make sure pending changes reach the disk before exiting
+app.on("will-quit", () => {
+  Storage.flushAllSync();
 });
 
 app.on("window-all-closed", () => {

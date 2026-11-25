@@ -1,4 +1,5 @@
 import {
+  addPlaylistToQueue,
   createPlaylist,
   deletePlaylist,
   openedPlaylist,
@@ -13,6 +14,7 @@ import { PlaylistID, PlaylistInfo } from "@shared/types/common.types";
 import {
   ArrowLeftIcon,
   CheckIcon,
+  ListEndIcon,
   ListMusicIcon,
   PencilIcon,
   PlusIcon,
@@ -59,6 +61,15 @@ const PlaylistDetail: Component<PlaylistDetailProps> = (props) => {
         <span class="text-sm text-subtext">
           {playlist().count} {playlist().count === 1 ? "song" : "songs"}
         </span>
+        <Button
+          size="square"
+          variant="outlined"
+          onClick={() => addPlaylistToQueue(props.id)}
+          disabled={playlist().count === 0}
+          title="Add all songs to queue"
+        >
+          <ListEndIcon size={20} />
+        </Button>
       </div>
       <SongList playlist={props.id} />
     </>
@@ -156,6 +167,15 @@ const PlaylistRow: Component<PlaylistRowProps> = (props) => {
               when={confirmDelete()}
               fallback={
                 <div class="flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                  <Button
+                    size="square"
+                    variant="ghost"
+                    onClick={() => addPlaylistToQueue(props.playlist.id)}
+                    disabled={props.playlist.count === 0}
+                    title="Add all songs to queue"
+                  >
+                    <ListEndIcon size={18} />
+                  </Button>
                   <Button size="square" variant="ghost" onClick={startEditing} title="Rename">
                     <PencilIcon size={18} />
                   </Button>

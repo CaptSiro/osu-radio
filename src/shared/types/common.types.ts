@@ -82,9 +82,12 @@ export type Song = {
   // Colors
   primaryColor?: string;
   secondaryColor?: string;
+
+  // Per-song volume set by the user (0..1)
+  volume?: number;
 } & Resource;
 
-// Serialization is in JSON that's why properties are only single letter
+// Search index of a song. Built in memory from the songs table (not persisted)
 export type SongIndex = {
   id: string;
   // title
@@ -101,13 +104,6 @@ export type SongIndex = {
   // beatmap difficulty names
   diffs: string[];
   bpm: number;
-};
-
-// System table definition
-export type System = {
-  "songDir.mtime": string;
-  indexes: SongIndex[];
-  allTags: { [key: string]: string[] };
 };
 
 // Settings table definition
@@ -142,20 +138,11 @@ export type PlaylistInfo = {
 
 // Key is a name of a table. This name is passed to Storage.getTable(name) function to retrieve whole table as an object
 export type TableMap = {
+  // Key is Song.audio
   songs: { [key: ResourceID]: Song };
-  audio: { [key: ResourceID]: AudioSource };
-  images: { [key: ResourceID]: ImageSource };
   playlists: { [key: PlaylistID]: Playlist };
   settings: Settings;
-  system: System;
 };
-
-// I guess this is definition of all binary blob files that can be access from the database code?
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type BlobMap = {};
-
-// Tables that work on ID -> Record relation
-export type ResourceTables = "songs" | "audio" | "images";
 
 export type OmitPropsWithReturnType<O extends { [K: string]: (...args: any[]) => any }, V> = {
   [K in keyof O as ReturnType<O[K]> extends V ? never : K]: O[K];

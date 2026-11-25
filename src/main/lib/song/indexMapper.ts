@@ -2,11 +2,13 @@ import { Storage } from "@main/lib/storage/Storage";
 import { Song, SongIndex } from "@shared/types/common.types";
 
 export function* indexMapper(indexes: SongIndex[]): Generator<Song> {
-  for (let i = 0; i < indexes.length; i++) {
-    const opt = Storage.getTable("songs").get(indexes[i].id);
+  const songs = Storage.getTable("songs").getStruct();
 
-    if (!opt.isNone) {
-      yield opt.value;
+  for (let i = 0; i < indexes.length; i++) {
+    const song = songs[indexes[i].id];
+
+    if (song !== undefined) {
+      yield song;
     }
   }
 }

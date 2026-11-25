@@ -1,4 +1,5 @@
 import { Router } from "@main/lib/route-pass/Router";
+import { setSongIndexes } from "@main/lib/song";
 import { Storage } from "@main/lib/storage/Storage";
 import { app } from "electron";
 import os from "os";
@@ -14,9 +15,9 @@ Router.respond("settings::write", (_evt, key, value) => {
 Router.respond("settings::DeleteSongData", () => {
   Storage.getTable("settings").delete("osuSongsDir");
   Storage.removeTable("songs");
-  Storage.removeTable("audio");
-  Storage.removeTable("images");
-  Storage.removeTable("system");
+  setSongIndexes(undefined);
+  // Make sure nothing is lost if the app is restarted right after
+  Storage.flushAllSync();
 });
 
 Router.respond("os::platform", () => {
@@ -24,6 +25,7 @@ Router.respond("os::platform", () => {
 });
 
 Router.respond("app::restart", () => {
+  Storage.flushAllSync();
   app.relaunch();
   app.quit();
 });

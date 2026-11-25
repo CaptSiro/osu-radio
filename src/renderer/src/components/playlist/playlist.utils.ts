@@ -80,6 +80,44 @@ export async function addSongToPlaylist(id: PlaylistID, song: Song): Promise<boo
   return true;
 }
 
+export async function addPlaylistToQueue(id: PlaylistID): Promise<void> {
+  const result = await window.api.request("queue::addPlaylist", id);
+
+  if (result.isError) {
+    notifyError("Could not add playlist to queue", result.error);
+    return;
+  }
+
+  const name = playlists().find((p) => p.id === id)?.name ?? "Playlist";
+  addNotice({
+    variant: result.value === 0 ? "neutral" : "success",
+    title: "Added to queue",
+    description:
+      result.value === 0
+        ? `All songs from ${name} are already in the queue.`
+        : `Added ${result.value} ${result.value === 1 ? "song" : "songs"} from ${name}.`,
+  });
+}
+
+/**
+ * Save current queue as new playlist. Returns true on success
+ */
+export async function saveQueueAsPlaylist(name: string): Promise<boolean> {
+  const result = await window.api.request("queue::saveAsPlaylist", name);
+
+  if (result.isError) {
+    notifyError("Could not save queue", result.error);
+    return false;
+  }
+
+  addNotice({
+    variant: "success",
+    title: "Queue saved",
+    description: `Saved as playlist ${name.trim()}.`,
+  });
+  return true;
+}
+
 export async function removeSongFromPlaylist(id: PlaylistID, song: Song): Promise<void> {
   await window.api.request("playlist::removeSong", id, song.audio);
 }

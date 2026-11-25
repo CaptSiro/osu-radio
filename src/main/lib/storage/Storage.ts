@@ -1,97 +1,153 @@
-import { Table } from "./Table";
-import { BlobMap, TableMap } from "@shared/types/common.types";
+import { Table, writeFileAtomicSync } from "./Table";
+import { TableMap } from "@shared/types/common.types";
 import { app } from "electron";
 import fs from "fs";
 import path from "path";
 
+/**
+ * Bump whenever the shape of persisted song data changes. On mismatch all imported song data is discarded and the user
+ * is asked to import their osu! directory again. User data (settings, playlists) is kept.
+ */
+const STORAGE_VERSION = 2;
+
+/** Tables that are derived from osu! files and can always be recreated by importing again */
+const SONG_DATA_TABLES: (keyof TableMap)[] = ["songs"];
+
+/** Files written by older versions that are no longer used */
+const LEGACY_FILES = ["audio.json", "images.json", "system.json"];
+
+const VERSION_FILE = "version";
+
 export class Storage {
-  private static cache: Map<string, Table<any>> = new Map();
+  private static cache: Map<keyof TableMap, Table<any>> = new Map();
+  private static dir: string | undefined = undefined;
 
   /**
-   * Get file located in default-appdata-directory/storage/[table-name].json and parse it then save to cache and return.
-   * If file does not exist it is created with empty table
-   * @param name
+   * Directory holding all table files. Created and migrated on first access
+   */
+  private static storageDir(): string {
+    if (this.dir !== undefined) {
+      return this.dir;
+    }
+
+    const dir = path.join(app.getPath("userData"), "storage");
+    fs.mkdirSync(dir, { recursive: true });
+    this.dir = dir;
+    this.migrate(dir);
+
+    return dir;
+  }
+
+  private static migrate(dir: string): void {
+    const versionPath = path.join(dir, VERSION_FILE);
+    let version = 0;
+
+    try {
+      version = Number(fs.readFileSync(versionPath, { encoding: "utf8" }).trim()) || 0;
+    } catch {
+      // Missing version file -> fresh install or storage written by version 1
+    }
+
+    if (version === STORAGE_VERSION) {
+      return;
+    }
+
+    for (const name of SONG_DATA_TABLES) {
+      fs.rmSync(this.tablePath(dir, name), { force: true });
+    }
+
+    for (const file of LEGACY_FILES) {
+      fs.rmSync(path.join(dir, file), { force: true });
+    }
+
+    // Force re-import of songs
+    const settings = this.getTable("settings");
+    settings.delete("osuSongsDir");
+    settings.flushSync();
+
+    writeFileAtomicSync(versionPath, String(STORAGE_VERSION));
+  }
+
+  private static tablePath(dir: string, name: keyof TableMap): string {
+    return path.join(dir, `${name}.json`);
+  }
+
+  /**
+   * Load table from `userData/storage/[table-name].json` (cached after first load). If the file does not exist or is
+   * corrupted, an empty table is returned
    */
   static getTable<T extends keyof TableMap>(name: T): Table<TableMap[T]> {
     const hit = this.cache.get(name);
-
     if (hit !== undefined) {
       return hit;
     }
 
-    const tablePath = path.join(app.getPath("userData"), `/storage/${name}.json`);
-
-    if (!fs.existsSync(tablePath)) {
-      fs.mkdirSync(path.join(app.getPath("userData"), "/storage"), { recursive: true });
-      fs.writeFileSync(tablePath, "{}");
-      const empty = new Table(tablePath, {} as any);
-      this.cache.set(name, empty);
-      return empty;
-    }
-
-    const table = new Table(
-      tablePath,
-      JSON.parse(fs.readFileSync(tablePath, { encoding: "utf8" })),
-    );
+    const tablePath = this.tablePath(this.storageDir(), name);
+    const table = new Table<TableMap[T]>(tablePath, this.readTableFile(tablePath));
     this.cache.set(name, table);
     return table;
   }
 
-  /**
-   * Write whole table to file
-   * @param name
-   * @param contents
-   */
-  static setTable<T extends keyof TableMap>(name: T, contents: TableMap[T]): Table<TableMap[T]> {
-    const tablePath = path.join(app.getPath("userData"), `/storage/${name}.json`);
-    if (!fs.existsSync(tablePath)) {
-      fs.mkdirSync(path.join(app.getPath("userData"), "/storage"), { recursive: true });
+  private static readTableFile(tablePath: string): any {
+    let contents: string;
+    try {
+      contents = fs.readFileSync(tablePath, { encoding: "utf8" });
+    } catch {
+      return {};
     }
 
-    fs.writeFileSync(tablePath, JSON.stringify(contents));
-    const t = new Table(tablePath, contents);
+    try {
+      const parsed = JSON.parse(contents);
+      if (parsed !== null && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch {
+      // Fall through
+    }
 
-    this.cache.set(name, t);
-    return t;
+    // Keep the broken file around for inspection instead of silently overwriting it
+    const backup = `${tablePath}.corrupt-${Date.now()}`;
+    console.error(`Table file '${tablePath}' is corrupted. Moving it to '${backup}'.`);
+    fs.renameSync(tablePath, backup);
+    return {};
+  }
+
+  /**
+   * Replace whole table contents. Persisted to disk shortly after
+   */
+  static setTable<T extends keyof TableMap>(name: T, contents: TableMap[T]): Table<TableMap[T]> {
+    const table = this.getTable(name);
+    table.replace(contents);
+    return table;
   }
 
   /**
    * Delete whole table
-   * @param name
    */
   static removeTable<T extends keyof TableMap>(name: T): void {
+    const tablePath = this.tablePath(this.storageDir(), name);
+    this.cache.get(name)?.discard();
     this.cache.delete(name);
-    fs.unlinkSync(path.join(app.getPath("userData"), `/storage/${name}.json`));
+    fs.rmSync(tablePath, { force: true });
   }
 
   /**
-   * Get file with binary data. If the file does not exist an empty file is created and read. Resulting in empty buffer
-   * being returned
-   * @param name
+   * Persist all pending changes asynchronously
    */
-  static getBlob<T extends keyof BlobMap>(name: T): Buffer {
-    const blobPath = path.join(app.getPath("userData"), "/storage/" + name);
-
-    if (!fs.existsSync(blobPath)) {
-      fs.mkdirSync(path.join(app.getPath("userData"), "/storage"), { recursive: true });
-      fs.writeFileSync(blobPath, "");
-    }
-
-    return fs.readFileSync(blobPath);
+  static async flushAll(): Promise<void> {
+    await Promise.all(Array.from(this.cache.values(), (table) => table.flush()));
   }
 
   /**
-   * Write Buffer to file
-   * @param name
-   * @param blob
+   * Persist all pending changes synchronously. Call before the process exits
    */
-  static setBlob<T extends keyof BlobMap>(name: T, blob: Buffer): void {
-    const blobPath = path.join(app.getPath("userData"), "/storage/" + name);
-
-    if (!fs.existsSync(blobPath)) {
-      fs.mkdirSync(path.join(app.getPath("userData"), "/storage"), { recursive: true });
+  static flushAllSync(): void {
+    for (const table of this.cache.values()) {
+      try {
+        table.flushSync();
+      } catch (error) {
+        console.error(`Failed to flush table '${table.filePath()}':`, error);
+      }
     }
-
-    fs.writeFileSync(blobPath, blob);
   }
 }
