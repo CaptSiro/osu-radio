@@ -8,6 +8,7 @@ import {
 } from "./main.utils";
 import "./styles.css";
 import Button from "@renderer/components/button/Button";
+import PlaylistPicker from "@renderer/components/playlist/PlaylistPicker";
 import Popover from "@renderer/components/popover/Popover";
 import ResizablePanel from "@renderer/components/resizable-panel/ResizablePanel";
 import SongImage from "@renderer/components/song/SongImage";
@@ -82,6 +83,7 @@ const MainScene: Component = () => {
       </div>
 
       <div class="pointer-events-none fixed inset-0 z-[-1] h-full bg-black/80" />
+      <PlaylistPicker />
     </div>
   );
 };

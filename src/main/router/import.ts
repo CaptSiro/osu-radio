@@ -6,6 +6,7 @@ import "./discord-router";
 import "./error-router";
 import "./local-volume-router";
 import "./parser-router";
+import "./playlist-router";
 import "./queue-router";
 import "./resource-router";
 import "./settings-router";

@@ -11,6 +11,7 @@ import {
   handleMuteSong,
 } from "../song.utils";
 import Button from "@renderer/components/button/Button";
+import { openPlaylistPicker } from "@renderer/components/playlist/playlist.utils";
 import Popover from "@renderer/components/popover/Popover";
 import Slider from "@renderer/components/slider/Slider";
 import { isSongUndefined } from "@renderer/lib/song";
@@ -243,7 +244,15 @@ const RightPart = () => {
           </Popover.Content>
         </Portal>
       </Popover>
-      <Button size="icon" variant="ghost">
+      <Button
+        size="icon"
+        variant="ghost"
+        title="Add to playlist"
+        disabled={isSongUndefined(song())}
+        onClick={() => {
+          if (!isSongUndefined(song())) openPlaylistPicker(song());
+        }}
+      >
         <CirclePlusIcon size={20} />
       </Button>
     </div>

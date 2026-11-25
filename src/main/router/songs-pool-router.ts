@@ -2,17 +2,11 @@ import { Router } from "@main/lib/route-pass/Router";
 import { filter } from "@main/lib/song/filter";
 import { indexMapper } from "@main/lib/song/indexMapper";
 import order from "@main/lib/song/order";
-import { Storage } from "@main/lib/storage/Storage";
+import { getViewIndexes } from "@main/lib/song/view";
 import { none, some } from "@shared/lib/rust-types/Optional";
 
 Router.respond("query::songsPool::init", (_evt, payload) => {
-  const indexes = Storage.getTable("system").get("indexes");
-
-  if (indexes.isNone) {
-    return none();
-  }
-
-  const filtered = filter(indexes.value, payload);
+  const filtered = filter(getViewIndexes(payload.view), payload);
 
   return some({
     initialIndex: 0,
@@ -29,13 +23,7 @@ Router.respond("query::songsPool", (_evt, request, payload) => {
     return none();
   }
 
-  const opt = Storage.getTable("system").get("indexes");
-
-  if (opt.isNone) {
-    return none();
-  }
-
-  const indexes = filter(opt.value, payload);
+  const indexes = filter(getViewIndexes(payload.view), payload);
 
   const sortFN = order(payload.order);
 

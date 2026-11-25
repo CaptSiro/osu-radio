@@ -8,6 +8,7 @@ import {
   sidebarExpanded,
 } from "./main.utils";
 import Button from "@renderer/components/button/Button";
+import Playlists from "@renderer/components/playlist/Playlists";
 import ResizablePanel, {
   useResizablePanel,
 } from "@renderer/components/resizable-panel/ResizablePanel";
@@ -121,6 +122,9 @@ const SidebarContent: Component = () => {
     <>
       <Tabs.Content value={SIDEBAR_PAGES.SONGS.value}>
         <SongList isAllSongs={true} />
+      </Tabs.Content>
+      <Tabs.Content value={SIDEBAR_PAGES.PLAYLISTS.value}>
+        <Playlists />
       </Tabs.Content>
       <Tabs.Content value={SIDEBAR_PAGES.SETTINGS.value}>
         <Settings />

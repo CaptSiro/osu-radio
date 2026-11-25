@@ -5,6 +5,8 @@ import type {
   InfiniteScrollerRequest,
   InfiniteScrollerResponse,
   Optional,
+  PlaylistID,
+  PlaylistInfo,
   QueueCreatePayload,
   ResourceID,
   ResourceTables,
@@ -44,6 +46,13 @@ export type RequestAPI = {
   "queue::removeSong": (song: ResourceID | undefined) => void;
   "queue::create": (payload: QueueCreatePayload) => void;
   "queue::shuffle": () => void;
+
+  "playlist::getAll": () => PlaylistInfo[];
+  "playlist::create": (name: string) => Result<PlaylistID, string>;
+  "playlist::rename": (id: PlaylistID, name: string) => Result<void, string>;
+  "playlist::delete": (id: PlaylistID) => void;
+  "playlist::addSong": (id: PlaylistID, song: ResourceID) => Result<void, string>;
+  "playlist::removeSong": (id: PlaylistID, song: ResourceID) => void;
 
   "dir::select": () => Optional<OsuDirectory>;
   "dir::autoGetOsuDirs": () => Optional<OsuDirectory[]>;
@@ -98,6 +107,8 @@ export type ListenAPI = {
   "queue::destroyed": () => void;
 
   "songView::reset": () => void;
+
+  "playlist::changed": () => void;
 
   "window::maximizeChange": (maximized: boolean) => void;
 

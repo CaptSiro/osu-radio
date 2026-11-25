@@ -2,20 +2,14 @@ import { Router } from "@main/lib/route-pass/Router";
 import { filter } from "@main/lib/song/filter";
 import { indexMapper } from "@main/lib/song/indexMapper";
 import order from "@main/lib/song/order";
+import { getViewIndexes } from "@main/lib/song/view";
 import { Storage } from "@main/lib/storage/Storage";
 import { mainWindow } from "@main/main";
 import { none, some } from "@shared/lib/rust-types/Optional";
 import { fail, ok } from "@shared/lib/rust-types/Result";
 import { shuffle } from "@shared/lib/tungsten/collections";
 import errorIgnored from "@shared/lib/tungsten/errorIgnored";
-import {
-  Optional,
-  QueueCreatePayload,
-  QueueView,
-  Result,
-  Song,
-  SongIndex,
-} from "@shared/types/common.types";
+import { Optional, QueueCreatePayload, Result, Song } from "@shared/types/common.types";
 
 let queue: Song[];
 
@@ -31,14 +25,18 @@ Router.respond("queue::create", async (_evt, payload) => {
     // Payload is practically same. Find start song and play queue from there
     const newIndex = queue.findIndex((s) => s.osuFile === payload.startSong);
 
-    if (newIndex === -1 || newIndex === index) {
+    if (newIndex === index) {
       return;
     }
 
-    index = newIndex;
-    lastPayload = payload;
-    await Router.dispatch(mainWindow, "queue::songChanged", queue[index]).catch(errorIgnored);
-    return;
+    if (newIndex !== -1) {
+      index = newIndex;
+      lastPayload = payload;
+      await Router.dispatch(mainWindow, "queue::songChanged", queue[index]).catch(errorIgnored);
+      return;
+    }
+
+    // Start song is not in the queue (e.g. it was added to the playlist after the queue was created). Rebuild queue
   }
 
   lastPayload = payload;
@@ -46,7 +44,7 @@ Router.respond("queue::create", async (_evt, payload) => {
    * Create list of {@link SongIndex} from current {@link QueueView}. This list is filtered via payload
    * specifications. Afterward it is mapped back to {@link Song} object
    */
-  queue = Array.from(indexMapper(filter(getIndexes(payload.view), payload)));
+  queue = Array.from(indexMapper(filter(getViewIndexes(payload.view), payload)));
 
   /**
    * Create ordering function from order literal {@link QueueCreatePayload}
@@ -69,29 +67,6 @@ Router.respond("queue::create", async (_evt, payload) => {
   await Router.dispatch(mainWindow, "queue::created").catch(errorIgnored);
   await Router.dispatch(mainWindow, "queue::songChanged", queue[index]).catch(errorIgnored);
 });
-
-function getIndexes(view: QueueView): SongIndex[] {
-  if (view.playlists !== undefined) {
-    //TODO: implement multi playlist playback
-    return [];
-  }
-
-  if (view.isAllSongs) {
-    const indexes = Storage.getTable("system").get("indexes");
-    if (indexes.isNone) {
-      return [];
-    }
-
-    return indexes.value;
-  }
-
-  if (view.playlist) {
-    //TODO: get playlist
-    return [];
-  }
-
-  return [];
-}
 
 function comparePayload(
   current: QueueCreatePayload,
