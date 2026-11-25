@@ -1,9 +1,6 @@
 import { createPlaylist, playlistsTable } from "@main/lib/playlist";
 import { Router } from "@main/lib/route-pass/Router";
-import { filter } from "@main/lib/song/filter";
-import { indexMapper } from "@main/lib/song/indexMapper";
-import order from "@main/lib/song/order";
-import { getViewIndexes } from "@main/lib/song/view";
+import { querySongs } from "@main/lib/song/query";
 import { Storage } from "@main/lib/storage/Storage";
 import { mainWindow } from "@main/main";
 import { none, some } from "@shared/lib/rust-types/Optional";
@@ -41,20 +38,9 @@ Router.respond("queue::create", async (_evt, payload) => {
   }
 
   lastPayload = payload;
-  /**
-   * Create list of {@link SongIndex} from current {@link QueueView}. This list is filtered via payload
-   * specifications. Afterward it is mapped back to {@link Song} object
-   */
-  queue = Array.from(indexMapper(filter(getViewIndexes(payload.view), payload)));
-
-  /**
-   * Create ordering function from order literal {@link QueueCreatePayload}
-   */
-  const ordering = order(payload.order);
-
-  if (!ordering.isError) {
-    queue.sort(ordering.value);
-  }
+  // Songs of current view filtered and sorted by payload. Usually already cached by the song list. Copied because the
+  // queue is mutated (shuffle, playNext, ...) and the cached result is shared
+  queue = querySongs(payload).slice();
 
   // Set playing index
   const songIndex = queue.findIndex((s) => s.osuFile === payload.startSong);

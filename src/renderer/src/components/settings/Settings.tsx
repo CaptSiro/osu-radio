@@ -2,6 +2,7 @@ import Button from "../button/Button";
 import Select from "@renderer/components/select/Select";
 import { changeAudioDevice } from "@renderer/components/song/song.utils";
 import { cn } from "@renderer/lib/css.utils";
+import { OsuDirectory } from "@shared/types/router.types";
 import { GlobeIcon, LucideIcon, Volume2Icon, HardDrive } from "lucide-solid";
 import { Component, createEffect, createSignal, For, JSX, onMount } from "solid-js";
 
@@ -15,6 +16,7 @@ const Settings: Component = () => {
         <AudioDeviceSetting />
       </SettingsSection>
       <SettingsSection title="Storage" Icon={HardDrive}>
+        <OsuDirSetting />
         {/*
           Clicking this when running in dev mode, the app will not restart correctly.
           You will need to manually close the app and start it again.
@@ -34,6 +36,37 @@ const Settings: Component = () => {
         </Button>
       </SettingsSection>
     </div>
+  );
+};
+
+const OsuDirSetting: Component = () => {
+  const [dir, setDir] = createSignal<OsuDirectory>();
+
+  onMount(async () => {
+    const current = await window.api.request("dir::current");
+    if (!current.isNone) {
+      setDir(current.value);
+    }
+  });
+
+  return (
+    <Setting name="osu-dir" label="osu! installation">
+      <p id="osu-dir" class="break-all text-sm text-subtext">
+        {dir() !== undefined ? `${dir()!.path} (${dir()!.version})` : "No installation found"}
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <Button
+          variant="outlined"
+          onClick={() => window.api.request("settings::reimportSongs")}
+          title="Import songs from current osu! installation again, e.g. after adding new songs in-game"
+        >
+          Re-import songs
+        </Button>
+        <Button variant="outlined" onClick={() => window.api.request("settings::changeOsuDir")}>
+          Change osu! installation
+        </Button>
+      </div>
+    </Setting>
   );
 };
 

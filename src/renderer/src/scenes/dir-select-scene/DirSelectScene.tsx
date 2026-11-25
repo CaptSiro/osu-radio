@@ -9,8 +9,21 @@ import { Accessor, Component, createSignal, For, onMount, Setter, Show } from "s
 export default function DirSelectScene() {
   const [dirs, setDirs] = createSignal<OsuDirectory[]>([]);
   const [selectedDir, setSelectedDir] = createSignal<OsuDirectory>({ version: "none", path: "" });
+  // Opened from settings: user may go back without changing anything
+  const [isCancelable, setIsCancelable] = createSignal(false);
+  const [currentPath, setCurrentPath] = createSignal<string>();
 
   onMount(async () => {
+    const [cancelable, current] = await Promise.all([
+      window.api.request("dir::isCancelable"),
+      window.api.request("dir::current"),
+    ]);
+
+    setIsCancelable(cancelable);
+    if (cancelable && !current.isNone) {
+      setCurrentPath(current.value.path);
+    }
+
     await autodetectDir();
   });
 
@@ -21,6 +34,10 @@ export default function DirSelectScene() {
     }
 
     setDirs(autoGetDir.value);
+  };
+
+  const cancel = async () => {
+    await window.api.request("dir::cancel");
   };
 
   const selectDir = async () => {
@@ -65,7 +82,9 @@ export default function DirSelectScene() {
         {os() !== "darwin" && <WindowsControls />}
       </div>
       <div class="flex h-full max-h-[720px] w-full max-w-[860px] flex-col justify-between gap-12 overflow-y-auto rounded-2xl border border-stroke/10 bg-regular-material p-8 shadow-2xl">
-        <h1 class="pt-12 text-center text-2xl">Welcome to osu! radio</h1>
+        <h1 class="pt-12 text-center text-2xl">
+          {isCancelable() ? "Change osu! installation" : "Welcome to osu! radio"}
+        </h1>
         <div class="flex flex-col gap-4">
           <div class="flex flex-col gap-1.5">
             <label class="text-md font-bold text-text">Select an osu! installation:</label>
@@ -74,6 +93,7 @@ export default function DirSelectScene() {
                 {(dir) => (
                   <InstallationCard
                     directory={dir}
+                    isCurrent={dir.path === currentPath()}
                     selectedDir={selectedDir}
                     setSelectedDir={setSelectedDir}
                   />
@@ -89,7 +109,12 @@ export default function DirSelectScene() {
           </div>
         </div>
 
-        <div class="flex items-end justify-end">
+        <div class="flex items-end justify-end gap-2">
+          <Show when={isCancelable()}>
+            <Button size="large" variant="outlined" onClick={cancel}>
+              <span>Cancel</span>
+            </Button>
+          </Show>
           <Button
             size="large"
             disabled={selectedDir().version === "none" ? true : false}
@@ -105,6 +130,7 @@ export default function DirSelectScene() {
 
 type InstallationCardProps = {
   directory: OsuDirectory;
+  isCurrent?: boolean;
   selectedDir: Accessor<OsuDirectory>;
   setSelectedDir: Setter<OsuDirectory>;
 };
@@ -132,6 +158,9 @@ const InstallationCard: Component<InstallationCardProps> = (props) => {
           >
             {props.directory.version.toUpperCase()}
           </div>
+          <Show when={props.isCurrent}>
+            <span class="text-xs text-subtext">Current</span>
+          </Show>
         </div>
       </div>
     </div>

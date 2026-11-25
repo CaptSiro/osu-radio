@@ -1,16 +1,11 @@
 import { Router } from "@main/lib/route-pass/Router";
-import { filter } from "@main/lib/song/filter";
-import { indexMapper } from "@main/lib/song/indexMapper";
-import order from "@main/lib/song/order";
-import { getViewIndexes } from "@main/lib/song/view";
+import { querySongs } from "@main/lib/song/query";
 import { none, some } from "@shared/lib/rust-types/Optional";
 
 Router.respond("query::songsPool::init", (_evt, payload) => {
-  const filtered = filter(getViewIndexes(payload.view), payload);
-
   return some({
     initialIndex: 0,
-    count: filtered.length,
+    count: querySongs(payload).length,
   });
 });
 
@@ -23,16 +18,8 @@ Router.respond("query::songsPool", (_evt, request, payload) => {
     return none();
   }
 
-  const indexes = filter(getViewIndexes(payload.view), payload);
-
-  const sortFN = order(payload.order);
-
-  if (indexes === undefined || sortFN.isError) {
-    return none();
-  }
-
-  const songs = Array.from(indexMapper(indexes));
-  songs.sort(sortFN.value);
+  // Cached between pages of the same query
+  const songs = querySongs(payload);
 
   if (request.index * BUFFER_SIZE >= songs.length) {
     return none();
