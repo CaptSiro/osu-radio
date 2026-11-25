@@ -46,6 +46,8 @@ export type RequestAPI = {
   "queue::removeSong": (song: ResourceID | undefined) => void;
   "queue::create": (payload: QueueCreatePayload) => void;
   "queue::shuffle": () => void;
+  "queue::addPlaylist": (id: PlaylistID) => Result<number, string>;
+  "queue::saveAsPlaylist": (name: string) => Result<PlaylistID, string>;
 
   "playlist::getAll": () => PlaylistInfo[];
   "playlist::create": (name: string) => Result<PlaylistID, string>;

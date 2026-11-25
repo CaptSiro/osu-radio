@@ -1,3 +1,4 @@
+import { createPlaylist, playlistsTable } from "@main/lib/playlist";
 import { Router } from "@main/lib/route-pass/Router";
 import { filter } from "@main/lib/song/filter";
 import { indexMapper } from "@main/lib/song/indexMapper";
@@ -135,6 +136,64 @@ function duration(startIndex = 0): Result<number, string> {
 
   return ok(sum);
 }
+
+/**
+ * Append songs of given playlist (in playlist order) to the end of the queue. Songs already in the queue are skipped.
+ * When there is no queue, a new one is created from the playlist and starts playing.
+ * @returns number of songs added
+ */
+Router.respond("queue::addPlaylist", async (_evt, id) => {
+  const playlist = playlistsTable().get(id);
+  if (playlist.isNone) {
+    return fail("Playlist does not exist.");
+  }
+
+  const songs = Storage.getTable("songs");
+  const present = new Set((queue ?? []).map((s) => s.audio));
+  const toAdd: Song[] = [];
+
+  for (const key of playlist.value.songs) {
+    if (present.has(key)) {
+      continue;
+    }
+
+    const song = songs.get(key);
+    if (song.isNone) {
+      continue;
+    }
+
+    present.add(key);
+    toAdd.push(song.value);
+  }
+
+  if (toAdd.length === 0) {
+    return ok(0);
+  }
+
+  if (queue === undefined || queue.length === 0) {
+    queue = toAdd;
+    index = 0;
+    lastPayload = undefined;
+    await Router.dispatch(mainWindow, "queue::created").catch(errorIgnored);
+    await Router.dispatch(mainWindow, "queue::songChanged", queue[index]).catch(errorIgnored);
+    return ok(toAdd.length);
+  }
+
+  queue.push(...toAdd);
+  await Router.dispatch(mainWindow, "queue::created").catch(errorIgnored);
+  return ok(toAdd.length);
+});
+
+Router.respond("queue::saveAsPlaylist", (_evt, name) => {
+  if (queue === undefined || queue.length === 0) {
+    return Promise.resolve(fail("Queue is empty."));
+  }
+
+  return createPlaylist(
+    name,
+    queue.map((s) => s.audio),
+  );
+});
 
 Router.respond("queue::shuffle", async () => {
   // Shuffle whole queue except currently playing song. Its position will be first in shuffled queue

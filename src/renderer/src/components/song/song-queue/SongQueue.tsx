@@ -1,16 +1,22 @@
 import { namespace } from "@renderer/App";
 import InfiniteScroller from "@renderer/components/InfiniteScroller";
+import Button from "@renderer/components/button/Button";
 import DropdownList from "@renderer/components/dropdown-list/DropdownList";
-import { openPlaylistPicker } from "@renderer/components/playlist/playlist.utils";
+import { Input } from "@renderer/components/input/Input";
+import {
+  openPlaylistPicker,
+  saveQueueAsPlaylist,
+} from "@renderer/components/playlist/playlist.utils";
 import SongItem from "@renderer/components/song/song-item/SongItem";
 import Impulse from "@renderer/lib/Impulse";
 import scrollIfNeeded from "@shared/lib/tungsten/scroll-if-needed";
 import { Song } from "@shared/types/common.types";
-import { ListPlusIcon, DeleteIcon } from "lucide-solid";
-import { Component, createSignal, onCleanup, onMount } from "solid-js";
+import { CheckIcon, DeleteIcon, ListPlusIcon, SaveIcon, XIcon } from "lucide-solid";
+import { Component, createSignal, onCleanup, onMount, Show } from "solid-js";
 
 const SongQueue: Component = () => {
   const [count, setCount] = createSignal(0);
+  const [saving, setSaving] = createSignal(false);
   const resetListing = new Impulse();
   const group = namespace.create(true);
   let view: HTMLDivElement | undefined;
@@ -78,12 +84,26 @@ const SongQueue: Component = () => {
 
   return (
     <div class="flex w-full flex-col">
-      <div class="flex items-center justify-between px-5 pb-2 pt-5">
+      <div class="flex items-center justify-between gap-2 px-5 pb-2 pt-5">
         <h2 class="text-sm font-bold">
           <span>Next songs on the queue</span>
           <span class="text-subtext"> ({count()})</span>
         </h2>
+        <Button
+          size="icon"
+          variant="ghost"
+          class="m-0"
+          onClick={() => setSaving((s) => !s)}
+          disabled={count() === 0}
+          title="Save queue as playlist"
+        >
+          <SaveIcon size={18} />
+        </Button>
       </div>
+
+      <Show when={saving()}>
+        <SaveQueueForm onDone={() => setSaving(false)} />
+      </Show>
 
       <div class="flex-grow overflow-y-auto px-4">
         <InfiniteScroller
@@ -106,6 +126,47 @@ const SongQueue: Component = () => {
         />
       </div>
     </div>
+  );
+};
+
+type SaveQueueFormProps = { onDone: () => void };
+const SaveQueueForm: Component<SaveQueueFormProps> = (props) => {
+  const [name, setName] = createSignal("");
+
+  const submit = async (e: SubmitEvent) => {
+    e.preventDefault();
+    if (await saveQueueAsPlaylist(name())) {
+      props.onDone();
+    }
+  };
+
+  return (
+    <form class="flex items-center gap-1 px-5 pb-2" onSubmit={submit}>
+      <Input
+        placeholder="Playlist name"
+        value={name()}
+        onInput={(e) => setName(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.stopPropagation();
+            props.onDone();
+          }
+        }}
+        autofocus
+      />
+      <Button
+        type="submit"
+        size="square"
+        variant="ghost"
+        disabled={name().trim() === ""}
+        title="Save"
+      >
+        <CheckIcon size={18} />
+      </Button>
+      <Button size="square" variant="ghost" onClick={() => props.onDone()} title="Cancel">
+        <XIcon size={18} />
+      </Button>
+    </form>
   );
 };
 
