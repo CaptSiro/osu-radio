@@ -122,12 +122,30 @@ export type Settings = {
   templateConfig: ConfigItem[];
 };
 
+export type PlaylistID = string;
+
+// Playlists table row. `songs` holds keys of the `songs` table (Song.audio), in insertion order
+export type Playlist = {
+  id: PlaylistID;
+  name: string;
+  songs: ResourceID[];
+  createdAt: number;
+};
+
+// Lightweight playlist description sent to renderer
+export type PlaylistInfo = {
+  id: PlaylistID;
+  name: string;
+  count: number;
+  createdAt: number;
+};
+
 // Key is a name of a table. This name is passed to Storage.getTable(name) function to retrieve whole table as an object
 export type TableMap = {
   songs: { [key: ResourceID]: Song };
   audio: { [key: ResourceID]: AudioSource };
   images: { [key: ResourceID]: ImageSource };
-  playlists: { [key: string]: ResourceID[] };
+  playlists: { [key: PlaylistID]: Playlist };
   settings: Settings;
   system: System;
 };

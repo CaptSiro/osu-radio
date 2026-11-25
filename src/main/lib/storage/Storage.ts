@@ -24,7 +24,9 @@ export class Storage {
     if (!fs.existsSync(tablePath)) {
       fs.mkdirSync(path.join(app.getPath("userData"), "/storage"), { recursive: true });
       fs.writeFileSync(tablePath, "{}");
-      return new Table(tablePath, {} as any);
+      const empty = new Table(tablePath, {} as any);
+      this.cache.set(name, empty);
+      return empty;
     }
 
     const table = new Table(

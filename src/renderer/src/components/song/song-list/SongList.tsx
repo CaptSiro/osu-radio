@@ -2,6 +2,10 @@ import { songsSearch } from "./song-list.utils";
 import { namespace } from "@renderer/App";
 import InfiniteScroller from "@renderer/components/InfiniteScroller";
 import DropdownList from "@renderer/components/dropdown-list/DropdownList";
+import {
+  openPlaylistPicker,
+  removeSongFromPlaylist,
+} from "@renderer/components/playlist/playlist.utils";
 import SongItem from "@renderer/components/song/song-item/SongItem";
 import SongListSearch from "@renderer/components/song/song-list-search/SongListSearch";
 import Impulse from "@renderer/lib/Impulse";
@@ -9,8 +13,8 @@ import { none, some } from "@shared/lib/rust-types/Optional";
 import { Optional, Order, ResourceID, SongsQueryPayload, Tag } from "@shared/types/common.types";
 import { Song } from "@shared/types/common.types";
 import { SearchQueryError } from "@shared/types/search-parser.types";
-import { ListPlus, ListStartIcon } from "lucide-solid";
-import { Component, createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { ListMinusIcon, ListPlus, ListStartIcon } from "lucide-solid";
+import { Component, createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 
 export type SongViewProps = {
   isAllSongs?: boolean;
@@ -26,8 +30,15 @@ const SongList: Component<SongViewProps> = (props) => {
   const [order, setOrder] = createSignal(DEFAULT_ORDER_VALUE);
   const [count, setCount] = createSignal(0);
 
+  // Plain object copy of the view. Props proxy should not be sent over IPC
+  const view = (): SongViewProps => ({
+    isAllSongs: props.isAllSongs,
+    isQueue: props.isQueue,
+    playlist: props.playlist,
+  });
+
   const [payload, setPayload] = createSignal<SongsQueryPayload>({
-    view: props,
+    view: view(),
     order: DEFAULT_ORDER_VALUE,
     tags: DEFAULT_TAGS_VALUE,
   });
@@ -49,7 +60,7 @@ const SongList: Component<SongViewProps> = (props) => {
 
     setSearchError(none());
     setPayload({
-      view: props,
+      view: view(),
       searchQuery: parsedQuery,
       order: o,
       tags: t,
@@ -57,13 +68,20 @@ const SongList: Component<SongViewProps> = (props) => {
     resetListing.pulse();
   };
 
+  const reset = () => resetListing.pulse();
+
   onMount(() => {
     createEffect(searchSongs);
-    window.api.listen("songView::reset", resetListing.pulse.bind(resetListing));
+    window.api.listen("songView::reset", reset);
+
+    if (props.playlist !== undefined) {
+      window.api.listen("playlist::changed", reset);
+    }
   });
 
   onCleanup(() => {
-    window.api.removeListener("songView::reset", resetListing.pulse.bind(resetListing));
+    window.api.removeListener("songView::reset", reset);
+    window.api.removeListener("playlist::changed", reset);
   });
 
   const createQueue = async (songResource: ResourceID) => {
@@ -93,7 +111,7 @@ const SongList: Component<SongViewProps> = (props) => {
               song={s}
               group={group}
               onSelect={createQueue}
-              contextMenu={<SongListContextMenuContent song={s} />}
+              contextMenu={<SongListContextMenuContent song={s} playlist={props.playlist} />}
             />
           )}
         />
@@ -102,11 +120,11 @@ const SongList: Component<SongViewProps> = (props) => {
   );
 };
 
-type SongListContextMenuContentProps = { song: Song };
+type SongListContextMenuContentProps = { song: Song; playlist?: string };
 const SongListContextMenuContent: Component<SongListContextMenuContentProps> = (props) => {
   return (
-    <DropdownList class="w-40">
-      <DropdownList.Item>
+    <DropdownList class="w-52">
+      <DropdownList.Item onClick={() => openPlaylistPicker(props.song)}>
         <span>Add to Playlist</span>
         <ListPlus class="text-subtext" size={20} />
       </DropdownList.Item>
@@ -118,6 +136,17 @@ const SongListContextMenuContent: Component<SongListContextMenuContentProps> = (
         <span>Play next</span>
         <ListStartIcon class="text-subtext" size={20} />
       </DropdownList.Item>
+      <Show when={props.playlist}>
+        {(playlist) => (
+          <DropdownList.Item
+            onClick={() => removeSongFromPlaylist(playlist(), props.song)}
+            class="text-danger"
+          >
+            <span>Remove from playlist</span>
+            <ListMinusIcon class="opacity-80" size={20} />
+          </DropdownList.Item>
+        )}
+      </Show>
     </DropdownList>
   );
 };

@@ -1,6 +1,7 @@
 import { namespace } from "@renderer/App";
 import InfiniteScroller from "@renderer/components/InfiniteScroller";
 import DropdownList from "@renderer/components/dropdown-list/DropdownList";
+import { openPlaylistPicker } from "@renderer/components/playlist/playlist.utils";
 import SongItem from "@renderer/components/song/song-item/SongItem";
 import Impulse from "@renderer/lib/Impulse";
 import scrollIfNeeded from "@shared/lib/tungsten/scroll-if-needed";
@@ -112,7 +113,7 @@ type QueueContextMenuContentProps = { song: Song };
 const QueueContextMenuContent: Component<QueueContextMenuContentProps> = (props) => {
   return (
     <DropdownList class="w-52">
-      <DropdownList.Item>
+      <DropdownList.Item onClick={() => openPlaylistPicker(props.song)}>
         <span>Add to Playlist</span>
         <ListPlusIcon class="text-subtext" size={20} />
       </DropdownList.Item>
